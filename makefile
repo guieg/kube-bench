@@ -49,6 +49,12 @@ build-docker:
 			 --build-arg KUBEBENCH_VERSION=$(KUBEBENCH_VERSION) \
              -t $(IMAGE_NAME) .
 
+build-docker-ztna:
+	docker build --build-arg BUILD_DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") \
+             --build-arg VCS_REF=$(VERSION) \
+			 --build-arg KUBEBENCH_VERSION=$(KUBEBENCH_VERSION) \
+             -t $(IMAGE_NAME) -f Dockerfile.ztna .
+
 build-docker-ubi:
 	docker build -f Dockerfile.ubi --build-arg BUILD_DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") \
              --build-arg VCS_REF=$(VERSION) \
@@ -100,3 +106,15 @@ kind-run-stig: kind-push
 		kubectl wait --for=condition=complete job.batch/kube-bench --timeout=60s && \
 		kubectl logs job/kube-bench > ./test.data && \
 		diff ./test.data integration/testdata/Expected_output_stig.data
+
+kind-run-ztna: KUBECONFIG = "./kubeconfig.kube-bench"
+kind-run-ztna: kind-push
+	sed "s/\$${VERSION}/$(VERSION)/" ./hack/kind.yaml > ./hack/kind.ztna.yml
+	kind get kubeconfig --name="$(KIND_PROFILE)" > $(KUBECONFIG)
+	-KUBECONFIG=$(KUBECONFIG) \
+		kubectl delete job kube-bench
+	KUBECONFIG=$(KUBECONFIG) \
+		kubectl apply -f ./hack/kind.ztna.yml && \
+		kubectl wait --for=condition=complete job.batch/kube-bench --timeout=60s && \
+		kubectl logs job/kube-bench > ./test.data && \
+		diff ./test.data integration/testdata/Expected_output.data
