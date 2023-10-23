@@ -1000,13 +1000,13 @@ groups:
           on the master node and ensure the correct value for the --bind-address parameter
         scored: true
 
-      - id: 1.5
+      - id: 1.1
         text: "ZTNA: test"
-        audit: "TEST=$(/usr/bin/kubectl get pods)"
+        audit_config: "kubectl get pod etcd-kube-bench-control-plane -n kube-system -o yaml"
         tests:
           bin_op: or
           test_items:
-            - env: "TEST"
+            - path: "{.kind}"
               set: true
         remediation: |
           Do ZTNA
